@@ -1,0 +1,14 @@
+langchain
+langchain-community
+langchain-core
+
+langchain-chroma
+
+pymupdf
+sentence-transformers
+langchain-huggingface
+
+
+streamlit
+flask
+python-dotenv
