@@ -76,7 +76,7 @@ def get_session_history(session_id: str) -> BaseChatMessageHistory:
         store[session_id] = ChatMessageHistory()
     return store[session_id]
 
-def Conversational_Chain(filename):
+def Question_Generator_Chain(filename):
 
     db = Chroma(persist_directory= filename, embedding_function=embeddings)
 
