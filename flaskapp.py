@@ -1,9 +1,10 @@
+
 from flask import Flask, request, jsonify
 from doc_loader import ingest
-from Question_Generator import Question_Generator_Chain
+from Question_Generator import *
+from Evaluation import *
 from datetime import datetime as dt
 import os
-
 
 app = Flask(__name__)
 
@@ -48,7 +49,7 @@ def ingest_pdf():
 
 
     persist_directory = os.path.join(app.config['DB_FOLDER'], filename)
-    print(file_path, persist_directory)
+    # print(file_path, persist_directory)
     ingest(file_path=file_path, persist_directory = persist_directory)
 
 
@@ -76,6 +77,8 @@ def question_generator():
     question_level = data['question_level']
     question_type = data['question_type']
     session_id = data['session_id']
+    topic_name = None
+    persist_directory = os.path.join(app.config['DB_FOLDER'], filename)
 
     if 'topic_name' in data:
         topic_name = data['topic_name']
@@ -89,14 +92,69 @@ def question_generator():
 
     if prompt and filename and session_id:
         print(prompt)
-        question_generation_chain = Question_Generator_Chain(filename)
+        question_generation_chain = Question_Generator_Chain(persist_directory)
         result= question_generation_chain.invoke({"input": prompt},
+                                                    config={"configurable": {"session_id": session_id}})["answer"]
+
+        response = {'question': result, 'time_stamp': dt.now()}
+        # Return the response as JSON
+        return jsonify(response)
+    else:
+        return jsonify({'error': 'Invalid Course Name'}), 400
+
+
+
+@app.route('/Evaluation', methods=['POST'])
+def get_evaluation():
+    # Get the input data from the request
+    data = request.get_json()
+
+    # Ensure the input is provided
+    if 'course_name' not in data:
+        return jsonify({'error': 'No course_name provided'}), 400
+    if 'question_level' not in data:
+        return jsonify({'error': 'No question_level provided'}), 400
+    if 'question_type' not in data:
+        return jsonify({'error': 'No question_type provided'}), 400
+    if 'session_id' not in data:
+        return jsonify({'error': 'No session_id provided'}), 400
+    if 'question' not in data:
+        return jsonify({'error': 'No question provided'}), 400
+    if 'answer' not in data:
+        return jsonify({'error': 'No answer provided'}), 400
+
+    filename = data['course_name']
+    question_level = data['question_level']
+    question_type = data['question_type']
+    session_id = data['session_id']
+    question = data['question']
+    answer = data['answer']
+    persist_directory = os.path.join(app.config['DB_FOLDER'], filename)
+
+
+    
+
+
+    if filename and question_level and question_type and session_id and question and answer:
+        prompt = f'''Evaluate  the  {question_level} level {question_type} 
+                    Question:\n
+                    {question}
+                    Answer:\n
+                    {answer}'''
+    # elif filename and question_level and question_type and session_id:
+    #     prompt = f'Generate a {question_level} level {question_type} question'
+
+    if prompt and filename and session_id:
+        # print(prompt)
+        evaluation_chain = Evaluation_Conversational_Chain(persist_directory)
+        result= evaluation_chain.invoke({"input": prompt},
                                                     config={"configurable": {"session_id": session_id}})["answer"]
     
         # result = chain.invoke("generate the report")
 
         # response = {'report': result, 'time_stamp': dt.now()}
-        response = {'report': result, 'time_stamp': dt.now()}
+        # print(type(result), result)
+        response = {'evaluation': result, 'time_stamp': dt.now()}
         # Return the response as JSON
         return jsonify(response)
     else:
