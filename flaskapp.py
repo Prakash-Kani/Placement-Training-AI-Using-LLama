@@ -3,6 +3,7 @@ from flask import Flask, request, jsonify
 from doc_loader import ingest
 from Question_Generator import *
 from Evaluation import *
+from Mock_Interview import *
 from datetime import datetime as dt
 import os
 
@@ -159,6 +160,50 @@ def get_evaluation():
         return jsonify(response)
     else:
         return jsonify({'error': 'Invalid Course Name'}), 400
+    
+
+
+@app.route('/Mock-Interview', methods=['POST'])
+def get_interview():
+    # Get the input data from the request
+    data = request.get_json()
+
+    # Ensure the input is provided
+    
+    if 'session_id' not in data:
+        return jsonify({'error': 'No session_id provided'}), 400
+    if 'position' not in data:
+        return jsonify({'error': 'No position provided'}), 400
+    if 'role' not in data:
+        return jsonify({'error': 'No role provided'}), 400
+    if 'skills' not in data:
+        return jsonify({'error': 'No skills provided'}), 400
+    if 'answer' not in data:
+        return jsonify({'error': 'No answer provided'}), 400
+
+    session_id = data['session_id']
+    position = data['position']
+    role = data['role']
+    skills = data['skills']
+    answer = data['answer']
+    persist_directory = 'Databases\new' #os.path.join(app.config['DB_FOLDER'], filename)
+    if answer =="" or answer == None or answer ==" ":
+        prompt = f"start the placement training for {position} {role} role required skills are {skills}"
+    else:
+        prompt = answer
+    if prompt  and session_id:
+        evaluation_chain = Mock_Interview_Chain(persist_directory)
+        result= evaluation_chain.invoke({"input": prompt},
+                                                    config={"configurable": {"session_id": session_id}})["answer"]
+    
+        
+        response = {'question': result, "session_id": session_id, 'time_stamp': dt.now()}
+        # Return the response as JSON
+        return jsonify(response)
+    else:
+        return jsonify({'error': 'Invalid Course Name'}), 400
+    
+
 
 if __name__ == '__main__':
     app.run(host = '0.0.0.0', port = 5000, debug=True)
